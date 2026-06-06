@@ -9,17 +9,18 @@ MCCalculator is a native Python/Tkinter desktop app for planning modded Minecraf
 The active project the user works from is:
 
 ```text
-H:\projects\MCCalculator
+H:\projects\MCCalculator\MC Calculator
 ```
 
 There may also be older workspace copies at:
 
 ```text
 F:\MCCalculator
+H:\projects\MCCalculator
 C:\Users\tarad\Documents\DATA SET\MCCalculator
 ```
 
-Future edits, tests, and launches should target `H:\projects\MCCalculator` directly. The `H:` copy is the one the user runs and where current recipe data lives.
+Future edits, tests, and launches should target `H:\projects\MCCalculator\MC Calculator` directly. The nested `H:` copy is the one the user runs and where current recipe data lives.
 
 The app is designed to be portable. Storage is rooted from the folder containing `desktop_app.py`:
 
@@ -28,11 +29,11 @@ ROOT = Path(__file__).resolve().parent
 PROFILE_ROOT = ROOT / "profile"
 ```
 
-That means the whole project folder can be moved to another drive/computer as long as `desktop_app.py`, `MCCalculator.bat`, `profile/`, and any desired `assets/` files move together.
+That means the whole project folder can be moved to another drive/computer as long as `desktop_app.py`, `launch.bat`, `profile/`, and any desired `assets/` files move together.
 
 ## Entry Points
 
-- `MCCalculator.bat`: Windows launcher. Uses `py` first, then `C:\Program Files\Python310\python.exe`, then `python`.
+- `launch.bat`: Windows launcher. Uses `py` first, then `python`.
 - `desktop_app.py`: Current native desktop app.
 - `profile/`: Persistent recipe storage.
 
