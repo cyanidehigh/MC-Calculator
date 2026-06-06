@@ -1,3 +1,4 @@
-/profile
-HANDOFF.md
+/profile/
+/__pycache__/
+*.py[cod]
 HANDOFF.md
