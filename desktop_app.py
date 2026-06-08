@@ -757,9 +757,9 @@ class CalculatorApp(tk.Tk):
         self.craft_tree.grid(row=3, column=0, sticky="nsew", pady=(6, 12))
 
         ttk.Label(left, text="Time estimate", font=("Segoe UI", 11, "bold")).grid(row=4, column=0, sticky="w")
-        self.time_tree = ttk.Treeview(left, columns=("process", "jobs", "ticks", "time"), show="headings", height=4)
+        self.time_tree = ttk.Treeview(left, columns=("process", "crafts", "ticks", "time"), show="headings", height=4)
         self.time_tree.heading("process", text="Process")
-        self.time_tree.heading("jobs", text="Jobs")
+        self.time_tree.heading("crafts", text="Crafts")
         self.time_tree.heading("ticks", text="Ticks")
         self.time_tree.heading("time", text="Time")
         self.time_tree.grid(row=5, column=0, sticky="nsew", pady=(6, 0))
@@ -1436,16 +1436,15 @@ class CalculatorApp(tk.Tk):
         for task_id in dependents:
             dependents[task_id].sort(key=lambda current: (tasks[current]["machine"].lower(), tasks[current]["item"].lower(), current))
 
-        machine_slots = {}
         rows = []
-        process_totals = {}
+        process_rows = []
         unknown = set()
 
         def ready_priority(task_id):
             task = tasks[task_id]
             machine = task["machine"] or "Recipe"
-            _simultaneous, ticks_per_craft = self.machine_setting(machine)
-            duration = task["crafts"] * ticks_per_craft
+            simultaneous, ticks_per_craft = self.machine_setting(machine)
+            duration = math.ceil(task["crafts"] / simultaneous) * ticks_per_craft
             return (
                 dependency_finish[task_id],
                 machine.lower(),
@@ -1462,20 +1461,11 @@ class CalculatorApp(tk.Tk):
             task = tasks[task_id]
             machine = task["machine"] or "Recipe"
             simultaneous, ticks_per_craft = self.machine_setting(machine)
-            if machine not in machine_slots:
-                machine_slots[machine] = [0] * simultaneous
-                heapq.heapify(machine_slots[machine])
-            elif len(machine_slots[machine]) < simultaneous:
-                for _index in range(simultaneous - len(machine_slots[machine])):
-                    heapq.heappush(machine_slots[machine], 0)
-
-            duration = task["crafts"] * ticks_per_craft
+            duration = math.ceil(task["crafts"] / simultaneous) * ticks_per_craft
             if ticks_per_craft <= 0:
                 unknown.add(machine)
-            slot_ready = heapq.heappop(machine_slots[machine])
-            start = max(earliest, slot_ready)
+            start = earliest
             finish = start + duration
-            heapq.heappush(machine_slots[machine], finish)
 
             rows.append({
                 "item": task["item"],
@@ -1486,10 +1476,12 @@ class CalculatorApp(tk.Tk):
                 "duration": duration,
                 "unknown": ticks_per_craft <= 0,
             })
-            process = process_totals.setdefault(machine, {"machine": machine, "jobs": 0, "ticks": 0, "unknown": False})
-            process["jobs"] += 1
-            process["ticks"] = max(process["ticks"], finish)
-            process["unknown"] = process["unknown"] or ticks_per_craft <= 0
+            process_rows.append({
+                "process": f"{task['item']} ({machine})" if machine else task["item"],
+                "crafts": task["crafts"],
+                "ticks": finish,
+                "unknown": ticks_per_craft <= 0,
+            })
 
             for dependent in dependents.get(task_id, []):
                 remaining_dependencies[dependent] -= 1
@@ -1503,7 +1495,7 @@ class CalculatorApp(tk.Tk):
         total_ticks = max((row["finish"] for row in rows), default=0)
         return {
             "rows": rows,
-            "processes": sorted(process_totals.values(), key=lambda row: row["machine"].lower()),
+            "processes": sorted(process_rows, key=lambda row: (row["ticks"], row["process"].lower())),
             "total_ticks": total_ticks,
             "unknown": sorted(unknown),
         }
@@ -1524,7 +1516,7 @@ class CalculatorApp(tk.Tk):
         for process in schedule["processes"]:
             ticks_text = "set ticks/craft" if process["unknown"] else compact_amount_text(process["ticks"])
             time_text = "unknown" if process["unknown"] else format_ticks(process["ticks"])
-            self.time_tree.insert("", tk.END, values=(process["machine"], process["jobs"], ticks_text, time_text))
+            self.time_tree.insert("", tk.END, values=(process["process"], compact_amount_text(process["crafts"]), ticks_text, time_text))
 
         if schedule["processes"]:
             total_text = "unknown" if schedule["unknown"] else format_ticks(schedule["total_ticks"])
